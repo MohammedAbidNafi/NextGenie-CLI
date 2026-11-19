@@ -1,10 +1,10 @@
 {
   "name": "nextgenie-cli",
   "module": "src/index.ts",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "^1.2.6"
   },
   "bin": {
     "@abidnafi/nextgenie": "src/index.ts"
