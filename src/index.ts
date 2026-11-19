@@ -8,7 +8,9 @@ import {
   statSync,
   readFileSync,
 } from "fs";
-import { join, resolve } from "path";
+import { dirname, join, relative, resolve } from "path";
+import { homedir } from "os";
+import { fileURLToPath } from "url";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -72,10 +74,15 @@ const DEFAULT_TEMPLATES_DIR = ".nextgenie";
 // Commands
 // ---------------------------------------------------------------------------
 
+// The package root, one level up from src/.
+const PACKAGE_ROOT = fileURLToPath(new URL("..", import.meta.url));
+const SKILL_FILE = join(PACKAGE_ROOT, "skills", "nextgenie", "SKILL.md");
+
 const program = new Command();
 program
   .name("nextgenie")
-  .description("Generate Next.js app router pages, layouts and route handlers");
+  .description("Generate Next.js app router pages, layouts and route handlers")
+  .version(packageVersion());
 
 function withSharedOptions(command: Command): Command {
   return command
@@ -182,11 +189,68 @@ withSharedOptions(
     }
   });
 
+interface SkillOptions {
+  dir?: string;
+  global?: boolean;
+  print?: boolean;
+  force?: boolean;
+}
+
+program
+  .command("skill")
+  .description(
+    "Install the NextGenie agent skill so AI assistants use this CLI instead of writing boilerplate"
+  )
+  .option("-d, --dir <path>", "Skills folder to install into (default: .claude/skills)")
+  .option("-g, --global", "Install into ~/.claude/skills for all projects")
+  .option("-p, --print", "Print the skill to stdout instead of installing it")
+  .option("-f, --force", "Overwrite an existing copy (e.g. to update it)")
+  .action((options: SkillOptions) => {
+    const skill = readFileSync(SKILL_FILE, "utf8");
+    if (options.print) {
+      process.stdout.write(skill);
+      return;
+    }
+    if (options.dir && options.global) fail("Use either --dir or --global, not both.");
+
+    const skillsDir = options.dir
+      ? resolve(process.cwd(), options.dir)
+      : options.global
+        ? join(homedir(), ".claude", "skills")
+        : join(process.cwd(), ".claude", "skills");
+    const target = join(skillsDir, "nextgenie", "SKILL.md");
+    const shown = options.global ? target : relative(process.cwd(), target) || target;
+
+    if (existsSync(target) && !options.force) {
+      if (readFileSync(target, "utf8") === skill) {
+        console.log(`✅ Skill is already up to date at ${shown}`);
+        return;
+      }
+      console.error(
+        `⚠️  ${shown} already exists and differs from this version. Use --force to overwrite it.`
+      );
+      process.exit(1);
+    }
+
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, skill);
+    console.log(`✅ Installed skill to ${shown}`);
+  });
+
 program.parse(process.argv);
 
 // ---------------------------------------------------------------------------
 // Setup: config, app dir, language
 // ---------------------------------------------------------------------------
+
+function packageVersion(): string {
+  try {
+    const pkg = JSON.parse(readFileSync(join(PACKAGE_ROOT, "package.json"), "utf8"));
+    return typeof pkg.version === "string" ? pkg.version : "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
 
 function fail(message: string): never {
   console.error(`❌ ${message}`);
