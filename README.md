@@ -49,6 +49,24 @@ Bun
 bun install -g nextgenie-cli
 ```
 
+<details>
+<summary>Install from GitHub Packages instead</summary>
+
+NextGenie is also published to GitHub Packages as `@mohammedabidnafi/nextgenie-cli`. GitHub requires you to sign in, even for public packages. Add this to your `~/.npmrc`, using a [personal access token](https://github.com/settings/tokens) with the `read:packages` scope:
+
+```
+@mohammedabidnafi:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=YOUR_TOKEN
+```
+
+Then install it:
+
+```bash
+npm install -g @mohammedabidnafi/nextgenie-cli
+```
+
+</details>
+
 Then let your AI assistant use it too (run this in your Next.js project):
 
 ```bash

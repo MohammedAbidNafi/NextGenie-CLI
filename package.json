@@ -1,6 +1,6 @@
 {
   "name": "nextgenie-cli",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "Scaffold Next.js App Router pages, layouts and route handlers in one command, with an agent skill so AI assistants save tokens",
   "keywords": [
     "nextjs",
