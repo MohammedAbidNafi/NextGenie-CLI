@@ -50,11 +50,19 @@ This will generate:
 ```
 app/
   ├─ about/
-  │   ├─ page.tsx
-  │   └─ layout.tsx
+  │   └─ page.tsx
   └─ contact/
-      ├─ page.tsx
-      └─ layout.tsx
+      └─ page.tsx
+```
+
+NextGenie uses `src/app` if it exists, otherwise `app`. Run it from your project root, or point it somewhere else with `--app-dir <path>`.
+
+### Adding Layouts
+
+Pages don't get a layout by default. Pass `--layout` (or `-l`) to add one to each page:
+
+```bash
+nextgenie create settings --layout
 ```
 
 ### Creating Nested Pages
@@ -72,12 +80,12 @@ app/
   └─ dashboard/
       ├─ layout.tsx
       ├─ profile/
-      │   ├─ page.tsx
-      │   └─ layout.tsx
+      │   └─ page.tsx
       └─ settings/
-          ├─ page.tsx
-          └─ layout.tsx
+          └─ page.tsx
 ```
+
+The root folder gets a `layout.tsx` when NextGenie creates it. An existing folder is left as it is.
 
 You can also pass the root folder with `--root` (or `-r`):
 
@@ -87,6 +95,27 @@ nextgenie create profile settings --root dashboard
 
 `in` only acts as the keyword when it is the second-to-last argument, so you can still create a page called `in` (e.g. `nextgenie create in about`). With `--root`, `in` is always treated as a page name.
 
+### Dynamic Routes
+
+Dynamic segments anywhere in the path, including the root folder, become typed `params`:
+
+```bash
+nextgenie create "blog/[slug]" "docs/[...path]" "shop/[[...filters]]"
+nextgenie create edit in "posts/[id]"
+```
+
+| Segment | Param type |
+| --- | --- |
+| `[slug]` | `string` |
+| `[...path]` | `string[]` |
+| `[[...filters]]` | `string[]` (optional) |
+
+Quote paths with brackets or parentheses so your shell doesn't expand them.
+
+### Route Groups
+
+A route group's `page.tsx` would map to its parent's URL and clash with the parent page, so a group like `(marketing)` only gets a `layout.tsx`. Add pages inside it with `nextgenie create about pricing in "(marketing)"`.
+
 ### Component Names
 
 Component names are generated from the last segment of the path and are always valid identifiers:
@@ -95,7 +124,7 @@ Component names are generated from the last segment of the path and are always v
 | --- | --- |
 | `my-page` | `MyPagePage` |
 | `blog/[slug]` | `SlugPage` |
-| `(marketing)` | `MarketingPage` |
+| `(marketing)` | `MarketingLayout` |
 | `404` | `Route404Page` |
 
 ## Generated Files
@@ -103,27 +132,43 @@ Component names are generated from the last segment of the path and are always v
 ### page.tsx
 
 ```tsx
-export default function PageName() {
-  return <div>pageName page</div>;
+export default function AboutPage() {
+  return <div>about page</div>;
+}
+```
+
+For a dynamic route such as `blog/[slug]`:
+
+```tsx
+export default async function SlugPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+
+  return <div>blog/[slug] page: {slug}</div>;
 }
 ```
 
 ### layout.tsx
 
 ```tsx
-export default function LayoutName({
+import type { ReactNode } from "react";
+
+export default function SettingsLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
-  return <div>{children}</div>;
+  return <>{children}</>;
 }
 ```
 
 ## Requirements
 
 - Node.js 16 or higher
-- Next.js 13+ (App Directory)
+- Next.js 15+ (App Directory). Dynamic route pages use the async `params` API.
 
 ## License
 This project is licensed under GPL-3.0 [View License](LICENSE)
