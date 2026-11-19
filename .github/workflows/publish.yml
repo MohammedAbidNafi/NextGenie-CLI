@@ -1,0 +1,64 @@
+# Publishes nextgenie-cli to npmjs.com when a GitHub release is published.
+#
+# One-time setup, pick one:
+# - Trusted publishing (recommended): on npmjs.com, open the nextgenie-cli
+#   package > Settings > Trusted publishing, add GitHub Actions with this
+#   repository and the workflow file name "publish.yml". No secret needed.
+# - Token: create a granular access token on npmjs.com with publish rights
+#   and add it to this repository as the NPM_TOKEN secret.
+#
+# To release: bump "version" in package.json on main, then create a GitHub
+# release whose tag is that version with a "v" in front (e.g. v1.1.0).
+
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write # trusted publishing and provenance
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      # npm 11.5+ (bundled with Node 24) is needed for trusted publishing.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Check the release tag matches package.json
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$tag" != "$version" ]; then
+            echo "::error::Release tag '$GITHUB_REF_NAME' doesn't match package.json version '$version'. Use tag v$version."
+            exit 1
+          fi
+
+      - run: bun install --frozen-lockfile
+
+      - name: Type-check
+        run: bunx tsc --noEmit
+
+      - name: Smoke test
+        run: |
+          bun src/index.ts --version
+          bun src/index.ts skill --print > /dev/null
+
+      - run: npm publish --access public
+        env:
+          # Only used when the NPM_TOKEN secret is set; otherwise npm uses
+          # trusted publishing.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

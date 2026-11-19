@@ -76,11 +76,28 @@ next-cli/
 
 ## Testing
 
-Before submitting a pull request, make sure all tests pass:
+Before submitting a pull request, run the same checks as CI:
 
 ```bash
-npm test
+bun install
+bunx tsc --noEmit
 ```
+
+Then try your change by running the CLI in a Next.js project (or any folder with an `app/` directory):
+
+```bash
+bun /path/to/NextGenie-CLI/src/index.ts create about
+```
+
+## Releasing
+
+Publishing to npm is automatic once a GitHub release is published:
+
+1. Bump `version` in `package.json` in a pull request and merge it.
+2. Create a GitHub release with the tag `v<version>` (e.g. `v1.1.0`), targeting `main`.
+3. The **Publish to npm** workflow checks that the tag matches `package.json`, type-checks, and publishes.
+
+The workflow authenticates with npm trusted publishing, or with an `NPM_TOKEN` secret if one is set. See the comments at the top of `.github/workflows/publish.yml`.
 
 ## Style Guide
 
