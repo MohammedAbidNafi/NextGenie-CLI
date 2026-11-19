@@ -1,13 +1,39 @@
 {
   "name": "nextgenie-cli",
-  "module": "src/index.ts",
   "version": "1.1.0",
-  "type": "module",
-  "devDependencies": {
-    "@types/bun": "^1.2.6"
+  "description": "Scaffold Next.js App Router pages, layouts and route handlers in one command, with an agent skill so AI assistants save tokens",
+  "keywords": [
+    "nextjs",
+    "next",
+    "app-router",
+    "cli",
+    "scaffold",
+    "generator",
+    "boilerplate",
+    "ai",
+    "agent-skill",
+    "claude-code"
+  ],
+  "homepage": "https://github.com/MohammedAbidNafi/NextGenie-CLI#readme",
+  "bugs": {
+    "url": "https://github.com/MohammedAbidNafi/NextGenie-CLI/issues"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MohammedAbidNafi/NextGenie-CLI.git"
+  },
+  "license": "GPL-3.0",
+  "module": "src/index.ts",
+  "type": "module",
   "bin": {
     "nextgenie": "src/index.ts"
+  },
+  "files": [
+    "src",
+    "skills"
+  ],
+  "devDependencies": {
+    "@types/bun": "^1.2.6"
   },
   "peerDependencies": {
     "typescript": "^5"
