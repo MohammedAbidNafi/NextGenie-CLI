@@ -6,7 +6,29 @@
 
 # NextGenie 🧞‍♂️
 
-A magical CLI tool to quickly generate Next.js app directory pages and layouts.
+**Scaffold Next.js App Router routes with one command, and let your AI assistant do the same for a fraction of the tokens.**
+
+NextGenie creates pages, layouts, loading/error/not-found files and route handlers with correct, typed boilerplate. It ships with an [agent skill](#-use-with-ai-assistants), so Claude Code and other assistants run one short command instead of writing every file by hand.
+
+## Why NextGenie?
+
+- 💸 **Cheaper AI sessions.** Your assistant writes a one-line command instead of hundreds of characters of boilerplate per route, so you pay for the code that matters.
+- ⚡ **Faster.** One command creates a whole route section, with no wait while a model types out each file.
+- ✅ **Correct every time.** Async typed `params`, `"use client"` error boundaries, and route groups that don't clash with parent pages. Boilerplate that a model can get subtly wrong comes out right.
+- 🧩 **Your conventions.** Custom templates and a config file mean people and AI generate the same code.
+
+### Measured, not guessed
+
+What the AI types compared with what it would otherwise write (characters, measured with the built-in TypeScript templates):
+
+| Command the AI runs | Files | AI types | Generated code | Smaller by |
+| --- | --- | --- | --- | --- |
+| `nextgenie create about contact pricing` | 3 | 38 | 519 | **14×** |
+| `nextgenie create "blog/[slug]" --loading --error --not-found` | 4 | 58 | 876 | **15×** |
+| `nextgenie route "api/posts/[id]" -m get,put,patch,delete` | 1 | 54 | 751 | **14×** |
+| `nextgenie create profile settings billing in dashboard --loading --error` | 10 | 72 | 2,063 | **29×** |
+
+The real saving is bigger than this table shows. It leaves out the overhead of a separate file-write call per file, and the assistant doesn't need to read the files back, because NextGenie prints what it created.
 
 ## Installation
 
@@ -25,6 +47,12 @@ pnpm add -g nextgenie-cli
 Bun
 ```bash
 bun install -g nextgenie-cli
+```
+
+Then let your AI assistant use it too (run this in your Next.js project):
+
+```bash
+nextgenie skill
 ```
 
 ## Features
@@ -157,9 +185,18 @@ NextGenie writes `.tsx`/`.ts` files when your project has a `tsconfig.json`, and
 
 Pages export a `metadata` object with a title built from the path (`my-page` → `My Page`). Turn it off with `--no-metadata`.
 
-## Use with AI Assistants
+## 🤖 Use with AI Assistants
 
-NextGenie comes with an [agent skill](skills/nextgenie/SKILL.md) that tells AI coding assistants to run `nextgenie` instead of writing route boilerplate themselves. That way the assistant spends tokens on your actual code, and generated files follow your config and templates.
+Without NextGenie, an assistant asked to "add a blog with post pages and an API" writes every `page.tsx`, `layout.tsx` and `route.ts` itself, token by token. With the NextGenie [agent skill](skills/nextgenie/SKILL.md) installed, it runs one command and then spends its tokens on the parts that are specific to your app.
+
+The skill teaches the assistant to:
+
+- run `nextgenie` for any App Router route file, putting several routes in one command
+- read NextGenie's one-line output instead of opening the generated files
+- handle skipped files and errors without retrying blindly
+- respect your `nextgenie.config.json` and custom templates
+
+The skill costs very little to keep around. Assistants that support skills, such as Claude Code, keep only its one-line description in context and load the full instructions (about 900 tokens) when they create routes.
 
 Install it into your project:
 
@@ -288,7 +325,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
 ## Requirements
 
-- Node.js 16 or higher
+- [Bun](https://bun.sh) installed (NextGenie runs on Bun, even when you install it with npm, Yarn or pnpm)
 - Next.js 15+ (App Directory). Dynamic route pages use the async `params` API.
 
 ## License
