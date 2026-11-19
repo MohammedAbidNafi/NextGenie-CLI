@@ -79,6 +79,25 @@ app/
           └─ layout.tsx
 ```
 
+You can also pass the root folder with `--root` (or `-r`):
+
+```bash
+nextgenie create profile settings --root dashboard
+```
+
+`in` only acts as the keyword when it is the second-to-last argument, so you can still create a page called `in` (e.g. `nextgenie create in about`). With `--root`, `in` is always treated as a page name.
+
+### Component Names
+
+Component names are generated from the last segment of the path and are always valid identifiers:
+
+| Path | Component |
+| --- | --- |
+| `my-page` | `MyPagePage` |
+| `blog/[slug]` | `SlugPage` |
+| `(marketing)` | `MarketingPage` |
+| `404` | `Route404Page` |
+
 ## Generated Files
 
 ### page.tsx
