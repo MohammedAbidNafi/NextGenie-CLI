@@ -1,28 +1,44 @@
-# Publishes nextgenie-cli to npmjs.com when a GitHub release is published.
+# Publishes a new version when it lands on main, to:
+# - npmjs.com as nextgenie-cli
+# - GitHub Packages as @mohammedabidnafi/nextgenie-cli (GitHub's npm
+#   registry only accepts scoped names)
 #
-# One-time setup, pick one:
+# Every push to main runs this workflow. Each registry is published only when
+# the "version" in package.json isn't there yet, so merges that don't bump
+# the version are a no-op, and re-running after a partial failure publishes
+# only what's missing. After publishing, it tags the commit v<version> and
+# creates a GitHub release with generated notes.
+#
+# One-time setup for npmjs.com, pick one:
 # - Trusted publishing (recommended): on npmjs.com, open the nextgenie-cli
 #   package > Settings > Trusted publishing, add GitHub Actions with this
 #   repository and the workflow file name "publish.yml". No secret needed.
 # - Token: create a granular access token on npmjs.com with publish rights
 #   and add it to this repository as the NPM_TOKEN secret.
+# GitHub Packages needs no setup; it uses the workflow's GITHUB_TOKEN.
 #
-# To release: bump "version" in package.json on main, then create a GitHub
-# release whose tag is that version with a "v" in front (e.g. v1.1.0).
+# To release: bump "version" in package.json in a pull request and merge it.
 
-name: Publish to npm
+name: Publish
 
 on:
-  release:
-    types: [published]
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
-  contents: read
-  id-token: write # trusted publishing and provenance
+  contents: write # tag and GitHub release
+  packages: write # GitHub Packages
+  id-token: write # npm trusted publishing and provenance
 
 concurrency:
   group: publish
   cancel-in-progress: false
+
+env:
+  NPM_NAME: nextgenie-cli
+  GPR_NAME: "@mohammedabidnafi/nextgenie-cli"
+  GPR_REGISTRY: https://npm.pkg.github.com
 
 jobs:
   publish:
@@ -30,35 +46,89 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v2
-
       # npm 11.5+ (bundled with Node 24) is needed for trusted publishing.
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
 
-      - name: Check the release tag matches package.json
+      - name: Check which registries need this version
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           version="$(node -p "require('./package.json').version")"
-          tag="${GITHUB_REF_NAME#v}"
-          if [ "$tag" != "$version" ]; then
-            echo "::error::Release tag '$GITHUB_REF_NAME' doesn't match package.json version '$version'. Use tag v$version."
-            exit 1
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          on_npm="$(npm view "$NPM_NAME@$version" version 2>/dev/null || true)"
+
+          # GitHub Packages needs auth even to read.
+          gpr_rc="$RUNNER_TEMP/gpr.npmrc"
+          echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" > "$gpr_rc"
+          on_gpr="$(NPM_CONFIG_USERCONFIG="$gpr_rc" npm view "$GPR_NAME@$version" version --registry "$GPR_REGISTRY" 2>/dev/null || true)"
+
+          npm=true; gpr=true
+          [ -n "$on_npm" ] && npm=false && echo "$NPM_NAME@$version is already on npm."
+          [ -n "$on_gpr" ] && gpr=false && echo "$GPR_NAME@$version is already on GitHub Packages."
+          echo "npm=$npm" >> "$GITHUB_OUTPUT"
+          echo "gpr=$gpr" >> "$GITHUB_OUTPUT"
+          if [ "$npm" = true ] || [ "$gpr" = true ]; then
+            echo "any=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "any=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing to publish. Bump the version in package.json to release."
           fi
 
-      - run: bun install --frozen-lockfile
+      - if: steps.check.outputs.any == 'true'
+        uses: oven-sh/setup-bun@v2
 
-      - name: Type-check
+      - if: steps.check.outputs.any == 'true'
+        run: bun install --frozen-lockfile
+
+      - if: steps.check.outputs.any == 'true'
+        name: Type-check
         run: bunx tsc --noEmit
 
-      - name: Smoke test
+      - if: steps.check.outputs.any == 'true'
+        name: Smoke test
         run: |
           bun src/index.ts --version
           bun src/index.ts skill --print > /dev/null
 
-      - run: npm publish --access public
+      - if: steps.check.outputs.npm == 'true'
+        name: Publish to npm
+        run: npm publish --access public
         env:
           # Only used when the NPM_TOKEN secret is set; otherwise npm uses
           # trusted publishing.
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - if: steps.check.outputs.gpr == 'true'
+        name: Publish to GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          # Publish a scoped copy; package.json in the repo stays unchanged.
+          node -e '
+            const fs = require("fs");
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            pkg.name = process.env.GPR_NAME;
+            pkg.publishConfig = { registry: process.env.GPR_REGISTRY };
+            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+          '
+          gpr_rc="$RUNNER_TEMP/gpr.npmrc"
+          echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" > "$gpr_rc"
+          NPM_CONFIG_USERCONFIG="$gpr_rc" npm publish --registry "$GPR_REGISTRY"
+          git checkout -- package.json
+
+      - if: steps.check.outputs.any == 'true'
+        name: Tag and create a GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ steps.check.outputs.version }}
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG already exists."
+          else
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes
+          fi

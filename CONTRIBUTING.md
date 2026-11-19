@@ -91,13 +91,19 @@ bun /path/to/NextGenie-CLI/src/index.ts create about
 
 ## Releasing
 
-Publishing to npm is automatic once a GitHub release is published:
+Publishing is automatic when a new version is merged into `main`:
 
-1. Bump `version` in `package.json` in a pull request and merge it.
-2. Create a GitHub release with the tag `v<version>` (e.g. `v1.1.0`), targeting `main`.
-3. The **Publish to npm** workflow checks that the tag matches `package.json`, type-checks, and publishes.
+1. Bump `version` in `package.json` in a pull request.
+2. Merge it.
 
-The workflow authenticates with npm trusted publishing, or with an `NPM_TOKEN` secret if one is set. See the comments at the top of `.github/workflows/publish.yml`.
+The **Publish** workflow then type-checks and publishes the version to:
+
+- npmjs.com as `nextgenie-cli`
+- GitHub Packages as `@mohammedabidnafi/nextgenie-cli` (GitHub's npm registry only accepts scoped names)
+
+Finally, it tags the commit `v<version>` and creates a GitHub release with generated notes. Merges that don't change the version publish nothing. If a run fails partway, re-running it publishes only what's missing.
+
+For npm, the workflow authenticates with trusted publishing, or with an `NPM_TOKEN` secret if one is set. GitHub Packages uses the workflow's own token. See the comments at the top of `.github/workflows/publish.yml`.
 
 ## Style Guide
 
