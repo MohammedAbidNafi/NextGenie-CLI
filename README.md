@@ -29,11 +29,12 @@ bun install -g nextgenie-cli
 
 ## Features
 
-- 🚀 Quickly generate Next.js pages and layouts
+- 🚀 Quickly generate Next.js pages, layouts and route handlers
 - 📁 Create nested page structures with a single command
-- 🎯 Automatic layout.tsx generation
+- 🎯 Typed params for dynamic routes, route groups, loading/error/not-found files
+- 🧩 Custom templates and a config file to match your project
+- 🤖 Agent skill so AI assistants use NextGenie instead of writing boilerplate
 - ⚡️ Simple and intuitive syntax
-- 🔥 Built with TypeScript for reliability
 
 ## Usage
 
@@ -155,6 +156,27 @@ NextGenie writes `.tsx`/`.ts` files when your project has a `tsconfig.json`, and
 ### Metadata
 
 Pages export a `metadata` object with a title built from the path (`my-page` → `My Page`). Turn it off with `--no-metadata`.
+
+## Use with AI Assistants
+
+NextGenie comes with an [agent skill](skills/nextgenie/SKILL.md) that tells AI coding assistants to run `nextgenie` instead of writing route boilerplate themselves. That way the assistant spends tokens on your actual code, and generated files follow your config and templates.
+
+Install it into your project:
+
+```bash
+nextgenie skill
+```
+
+This writes `.claude/skills/nextgenie/SKILL.md`, which Claude Code picks up automatically. Other options:
+
+| Command | What it does |
+| --- | --- |
+| `nextgenie skill --global` | Install for all your projects (`~/.claude/skills`) |
+| `nextgenie skill --dir .agents/skills` | Install into another tool's skills folder |
+| `nextgenie skill --print` | Print the skill, e.g. to paste into `AGENTS.md` or your editor's rules file |
+| `nextgenie skill --force` | Overwrite an older copy after upgrading NextGenie |
+
+Commit the installed skill so everyone on your team (and their assistants) gets it.
 
 ## Configuration
 

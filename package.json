@@ -7,7 +7,7 @@
     "@types/bun": "^1.2.6"
   },
   "bin": {
-    "@abidnafi/nextgenie": "src/index.ts"
+    "nextgenie": "src/index.ts"
   },
   "peerDependencies": {
     "typescript": "^5"
