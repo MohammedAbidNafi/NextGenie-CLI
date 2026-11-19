@@ -127,11 +127,93 @@ Component names are generated from the last segment of the path and are always v
 | `(marketing)` | `MarketingLayout` |
 | `404` | `Route404Page` |
 
+### Loading, Error and Not Found Files
+
+Add the other app router files with flags. They also work on pages that already exist, and existing files are never overwritten:
+
+```bash
+nextgenie create dashboard --loading --error --not-found
+```
+
+`error.tsx` is generated as a client component (`"use client"`), as Next.js requires.
+
+### Route Handlers
+
+Create API route handlers with the `route` command. It takes the same `in <root>`, `--root` and `--app-dir` options as `create`:
+
+```bash
+nextgenie route api/users "api/users/[id]"
+nextgenie route api/upload --methods post,put
+```
+
+`--methods` (or `-m`) accepts `GET`, `POST`, `PUT`, `PATCH` and `DELETE` and defaults to `GET,POST`. A folder can't have both a `page` and a `route`, so NextGenie skips either one when the other is already there.
+
+### JavaScript Projects
+
+NextGenie writes `.tsx`/`.ts` files when your project has a `tsconfig.json`, and `.jsx`/`.js` files without types otherwise. Override this with `--ts` or `--no-ts`.
+
+### Metadata
+
+Pages export a `metadata` object with a title built from the path (`my-page` → `My Page`). Turn it off with `--no-metadata`.
+
+## Configuration
+
+Put a `nextgenie.config.json` in your project root to change the defaults. Every key is optional, and CLI flags win over the file:
+
+```json
+{
+  "appDir": "src/app",
+  "templatesDir": ".nextgenie",
+  "typescript": true,
+  "layout": false,
+  "metadata": true
+}
+```
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `appDir` | `src/app`, then `app` | Where your app directory is |
+| `templatesDir` | `.nextgenie` | Folder with your custom templates |
+| `typescript` | `true` if `tsconfig.json` exists | Write TypeScript or JavaScript |
+| `layout` | `false` | Add a layout to every page (`--layout`) |
+| `metadata` | `true` | Export `metadata` from pages |
+
+### Custom Templates
+
+To use your own boilerplate, add any of these files to `.nextgenie/` (or your `templatesDir`): `page.tpl`, `layout.tpl`, `loading.tpl`, `error.tpl`, `not-found.tpl`, `route.tpl`. Files you don't add fall back to the built-in templates. The `.tpl` extension keeps your type-checker and linter from reading them.
+
+Templates can use these placeholders:
+
+| Placeholder | Example for `blog/[slug]` |
+| --- | --- |
+| `{{name}}` | `Slug` |
+| `{{route}}` | `blog/[slug]` |
+| `{{title}}` | `Blog` |
+| `{{params}}` | `slug` |
+| `{{paramsType}}` | `{ slug: string }` (empty in JavaScript or without params) |
+| `{{methods}}` | `GET, POST` (route handlers only) |
+
+For example, `.nextgenie/page.tpl`:
+
+```tsx
+export const metadata = { title: "{{title}} | My Site" };
+
+export default function {{name}}Page() {
+  return <main className="container">{{title}}</main>;
+}
+```
+
 ## Generated Files
 
 ### page.tsx
 
 ```tsx
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "About",
+};
+
 export default function AboutPage() {
   return <div>about page</div>;
 }
@@ -162,6 +244,23 @@ export default function SettingsLayout({
   children: ReactNode;
 }) {
   return <>{children}</>;
+}
+```
+
+### route.ts
+
+For `nextgenie route "api/users/[id]" -m get,post`:
+
+```ts
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return Response.json({ id });
+}
+
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const body = await request.json();
+  return Response.json({ id, body }, { status: 201 });
 }
 ```
 
